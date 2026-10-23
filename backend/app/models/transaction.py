@@ -2,8 +2,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import DateTime, Integer, Numeric, String, func
+from sqlalchemy import DateTime, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.base import Base
@@ -20,7 +21,7 @@ class Transaction(Base):
         DateTime(timezone=True), index=True, nullable=False
     )
     received_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), nullable=False
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -29,4 +30,6 @@ class Transaction(Base):
     browser: Mapped[str | None] = mapped_column(String(100), index=True)
     country: Mapped[str | None] = mapped_column(String(2))
     error_code: Mapped[str | None] = mapped_column(String(100), index=True)
-    raw_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    raw_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"), nullable=False
+    )

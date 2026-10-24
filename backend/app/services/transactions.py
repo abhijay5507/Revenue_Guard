@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -29,7 +29,7 @@ def persist_event(db: Session, event: PaymentEvent, raw_payload: dict) -> bool:
     }
     transaction = Transaction(
         **event.model_dump(include=transaction_fields),
-        received_at=datetime.now(timezone.utc),
+        received_at=datetime.now(UTC),
         raw_payload=raw_payload,
     )
     try:

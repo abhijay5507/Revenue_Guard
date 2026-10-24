@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.app.db.session import test_database_connection
 from backend.app.api.routes.webhooks import router as webhook_router
+from backend.app.db.session import test_database_connection
 
 app= FastAPI(title="RevenueGuard")
 app.include_router(webhook_router, prefix="/api/v1")

@@ -1,13 +1,13 @@
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
 from backend.app.models import Transaction
-from backend.app.services.transactions import TransactionStoreError, persist_event
 from backend.app.schemas.payment_event import PaymentEvent
+from backend.app.services.transactions import TransactionStoreError, persist_event
 
 
 def signed(payload: dict) -> tuple[bytes, str]:
@@ -20,7 +20,7 @@ def event_payload(event_id="evt_test"):
         "event_id": event_id,
         "transaction_id": "txn_1",
         "event_type": "payment.succeeded",
-        "occurred_at": datetime.now(timezone.utc).isoformat(),
+        "occurred_at": datetime.now(UTC).isoformat(),
         "amount": "12.3400",
         "currency": "USD",
         "status": "succeeded",
@@ -46,7 +46,7 @@ def test_metadata_and_signed_webhook(client):
 
 def test_signed_webhook_accepts_provider_extra_fields(client):
     payload = event_payload("evt_extra_field")
-    payload["sequence"] = 0
+    payload["sequence"] = 0 # type: ignore
     body, signature = signed(payload)
     response = client.post(
         "/api/v1/webhooks/payment",

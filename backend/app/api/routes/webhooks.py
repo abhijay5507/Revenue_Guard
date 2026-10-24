@@ -19,7 +19,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 async def receive_payment(
     request: Request,
     signature: str | None = Header(default=None, alias="X-RevenueGuard-Signature"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  
 ):
     body = await request.body()
     if not verify_signature(body, signature):

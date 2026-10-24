@@ -4,8 +4,8 @@ from typing import Any
 
 from sqlalchemy import DateTime, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.types import JSON
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import JSON
 
 from backend.app.db.base import Base
 

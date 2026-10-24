@@ -5,7 +5,7 @@ import json
 import os
 import random
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import httpx
@@ -17,7 +17,7 @@ def make_event(index: int) -> dict:
         "event_id": f"evt_{uuid.uuid4().hex}",
         "transaction_id": f"txn_{uuid.uuid4().hex[:16]}",
         "event_type": f"payment.{status}",
-        "occurred_at": (datetime.now(timezone.utc) - timedelta(minutes=random.randint(0, 10000))).isoformat(),
+        "occurred_at": (datetime.now(UTC) - timedelta(minutes=random.randint(0, 10000))).isoformat(),
         "amount": str(Decimal(random.randint(100, 500000)) / 100),
         "currency": random.choice(["USD", "EUR", "GBP", "INR"]),
         "status": status,

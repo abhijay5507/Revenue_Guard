@@ -15,15 +15,16 @@ from backend.app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Configuration constants (will be overridden by detection engine defaults)
-# ---------------------------------------------------------------------------
-HISTORY_WINDOW_MINUTES: int = 60  # look-back for gateway history
-BASELINE_WINDOW_MINUTES: int = 1440  # 24h baseline window
+
+
+
+HISTORY_WINDOW_MINUTES: int = 60
+BASELINE_WINDOW_MINUTES: int = 1440
+VOLUME_WINDOW_MINUTES: int = 15
 
 
 def _serialize_transaction(txn: Transaction) -> dict[str, Any]:
-    """Convert a Transaction ORM object to a plain dict for the detection engine."""
+
     return {
         "event_id": txn.event_id,
         "transaction_id": txn.transaction_id,
@@ -41,7 +42,7 @@ def _serialize_transaction(txn: Transaction) -> dict[str, Any]:
 
 
 def _load_transaction(db: Session, event_id: str) -> Transaction | None:
-    """Load a single transaction by event_id."""
+
     return db.execute(
         select(Transaction).where(Transaction.event_id == event_id)
     ).scalar_one_or_none()
@@ -53,7 +54,7 @@ def _load_gateway_history(
     window_start: datetime,
     window_end: datetime,
 ) -> list[dict[str, Any]]:
-    """Load recent transactions for a gateway within a time window."""
+
     rows = db.execute(
         select(Transaction)
         .where(
@@ -72,7 +73,7 @@ def _load_txn_id_history(
     window_start: datetime,
     window_end: datetime,
 ) -> list[dict[str, Any]]:
-    """Load recent events for a specific transaction_id."""
+
     rows = db.execute(
         select(Transaction)
         .where(
@@ -91,7 +92,7 @@ def _count_gateway_transactions(
     window_start: datetime,
     window_end: datetime,
 ) -> int:
-    """Count transactions for a gateway in a time window."""
+
     result = db.execute(
         select(func.count())
         .select_from(Transaction)
@@ -113,13 +114,13 @@ def _count_gateway_transactions(
     reject_on_worker_lost=True,
 )
 def process_payment_event(self, event_id: str) -> dict[str, Any]:
-    
+
     start_time = time.monotonic()
     logger.info("Processing payment event: %s", event_id)
 
     db: Session = SessionLocal()
     try:
-        # --- Step 1: Load the persisted transaction ----------------------
+
         txn = _load_transaction(db, event_id)
         if txn is None:
             logger.warning(
@@ -130,39 +131,52 @@ def process_payment_event(self, event_id: str) -> dict[str, Any]:
             return {"status": "skipped", "reason": "transaction_not_found", "event_id": event_id}
 
         txn_data = _serialize_transaction(txn)
-        txn_db_id = txn.id  # PK needed for alert persistence
+        txn_db_id = txn.id
 
-        # --- Step 2: Gather historical context ---------------------------
-        now = txn.occurred_at  # use the event's own timestamp as reference
+
+        now = txn.occurred_at
         history_start = now - timedelta(minutes=HISTORY_WINDOW_MINUTES)
         baseline_start = now - timedelta(minutes=BASELINE_WINDOW_MINUTES)
 
-        # Recent gateway transactions (for failure spike + volume spike)
+
         gateway_txns = _load_gateway_history(db, txn.gateway, history_start, now)
 
-        # Baseline gateway count (24h)
-        gateway_baseline_count = _count_gateway_transactions(
-            db, txn.gateway, baseline_start, history_start,
+
+
+        volume_start = now - timedelta(minutes=VOLUME_WINDOW_MINUTES)
+        gateway_current_count = _count_gateway_transactions(
+            db, txn.gateway, volume_start, now,
+        )
+        gateway_baseline_total = _count_gateway_transactions(
+            db, txn.gateway, baseline_start, volume_start,
         )
 
-        # Repeated-failure history for this transaction_id
+
+        baseline_duration_minutes = max(
+            1, int((volume_start - baseline_start).total_seconds() / 60)
+        )
+        gateway_baseline_count = (
+            gateway_baseline_total * VOLUME_WINDOW_MINUTES / baseline_duration_minutes
+        )
+
+
         txn_id_txns = _load_txn_id_history(db, txn.transaction_id, history_start, now)
 
         history = {
             "gateway_transactions": gateway_txns,
             "txn_id_transactions": txn_id_txns,
-            "gateway_current_count": len(gateway_txns),
+            "gateway_current_count": gateway_current_count,
             "gateway_baseline_count": gateway_baseline_count,
         }
 
-        # --- Step 3: Run anomaly detection -------------------------------
+
         try:
             from backend.app.detection.engine import AnomalyDetectionEngine
 
             engine = AnomalyDetectionEngine()
             result = engine.evaluate(txn_data, history)
         except ImportError:
-            # Detection engine not yet implemented — log and succeed
+
             logger.info(
                 "Detection engine not available; skipping analysis for %s",
                 event_id,
@@ -175,7 +189,7 @@ def process_payment_event(self, event_id: str) -> dict[str, Any]:
                 "elapsed_seconds": round(elapsed, 4),
             }
 
-        # --- Step 4: Persist alerts if triggered -------------------------
+
         alerts_created = 0
         if result.has_anomalies:
             try:
@@ -227,7 +241,7 @@ def process_payment_event(self, event_id: str) -> dict[str, Any]:
                 event_id,
             )
             return {"status": "failed", "event_id": event_id, "error": str(exc)}
-        # Should not reach here, but satisfy type checkers
+
         return {"status": "retrying", "event_id": event_id}
     finally:
         db.close()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+import random
 
 import pytest
 
@@ -19,10 +20,11 @@ from backend.app.detection.rules import (
 )
 from backend.app.detection.schemas import RuleResult, Severity
 from backend.app.detection.scoring import ScoringConfig, calculate_risk_score
+from mock.stream_transactions import generate_scenario
 
-# ============================================================================
-# Rule A: Large Transaction Detection Tests
-# ============================================================================
+
+
+
 
 def test_detect_large_transaction_normal():
     res = detect_large_transaction(amount=100.0, currency="USD")
@@ -32,37 +34,37 @@ def test_detect_large_transaction_normal():
 
 
 def test_detect_large_transaction_threshold_boundary():
-    # Exactly threshold (5000 USD) -> not triggered
+
     res = detect_large_transaction(amount=5000, currency="USD")
     assert not res.triggered
 
-    # Just above threshold -> Medium
+
     res = detect_large_transaction(amount=5001, currency="USD")
     assert res.triggered
     assert res.severity == Severity.MEDIUM
 
 
 def test_detect_large_transaction_severity_scaling():
-    # High: >= 2x threshold (< 5x)
+
     res_high = detect_large_transaction(amount=10000, currency="USD")
     assert res_high.triggered
     assert res_high.severity == Severity.HIGH
 
-    # Critical: >= 5x threshold
+
     res_crit = detect_large_transaction(amount=25000, currency="USD")
     assert res_crit.triggered
     assert res_crit.severity == Severity.CRITICAL
 
 
 def test_detect_large_transaction_currencies():
-    # INR threshold is 400,000
+
     res_inr_normal = detect_large_transaction(amount=300000, currency="INR")
     assert not res_inr_normal.triggered
 
     res_inr_large = detect_large_transaction(amount=500000, currency="INR")
     assert res_inr_large.triggered
 
-    # EUR threshold is 4,500
+
     res_eur = detect_large_transaction(amount=5000, currency="EUR")
     assert res_eur.triggered
 
@@ -74,9 +76,9 @@ def test_detect_large_transaction_invalid_inputs():
     assert not detect_large_transaction(amount=10000, currency="").triggered
 
 
-# ============================================================================
-# Rule B: Payment Failure Spike Tests
-# ============================================================================
+
+
+
 
 def test_payment_failure_spike_insufficient_samples():
     txs = [
@@ -89,7 +91,7 @@ def test_payment_failure_spike_insufficient_samples():
 
 
 def test_payment_failure_spike_triggered():
-    # 10 samples: 8 failed (80% -> CRITICAL)
+
     txs = []
     for i in range(8):
         txs.append({"transaction_id": f"tx_{i}", "gateway": "stripe", "status": "failed"})
@@ -102,7 +104,7 @@ def test_payment_failure_spike_triggered():
 
 
 def test_payment_failure_spike_deduplicates_retries():
-    # 10 records, but only 2 unique transaction_ids (multiple webhook retries)
+
     txs = [
         {"transaction_id": "tx_same_1", "gateway": "stripe", "status": "failed"}
         for _ in range(5)
@@ -111,14 +113,14 @@ def test_payment_failure_spike_deduplicates_retries():
         for _ in range(5)
     ]
     res = detect_payment_failure_spike(gateway="stripe", recent_transactions=txs)
-    # Total unique count is only 2, which is < min_sample_size (10)
+
     assert not res.triggered
     assert res.details["total_count"] == 2
 
 
-# ============================================================================
-# Rule C: Volume Spike Tests
-# ============================================================================
+
+
+
 
 def test_volume_spike_insufficient_baseline():
     res = detect_volume_spike(gateway="stripe", current_count=20, baseline_count=2)
@@ -127,20 +129,20 @@ def test_volume_spike_insufficient_baseline():
 
 
 def test_volume_spike_triggered():
-    # Baseline 10, Current 35 -> 3.5x ratio (>= 3.0x -> MEDIUM)
+
     res = detect_volume_spike(gateway="stripe", current_count=35, baseline_count=10)
     assert res.triggered
     assert res.severity == Severity.MEDIUM
 
-    # Baseline 10, Current 105 -> 10.5x ratio (>= 10.0x -> CRITICAL)
+
     res_crit = detect_volume_spike(gateway="stripe", current_count=105, baseline_count=10)
     assert res_crit.triggered
     assert res_crit.severity == Severity.CRITICAL
 
 
-# ============================================================================
-# Rule D: Repeated Failures Tests
-# ============================================================================
+
+
+
 
 def test_repeated_failures_triggered():
     txs = [
@@ -153,7 +155,7 @@ def test_repeated_failures_triggered():
 
 
 def test_repeated_failures_deduplicates_event_ids():
-    # 5 attempts with same event_id
+
     txs = [
         {"event_id": "evt_duplicate", "transaction_id": "txn_target", "status": "failed"}
         for _ in range(5)
@@ -163,9 +165,9 @@ def test_repeated_failures_deduplicates_event_ids():
     assert res.details["failed_event_count"] == 1
 
 
-# ============================================================================
-# Risk Scoring & Engine Tests
-# ============================================================================
+
+
+
 
 def test_risk_scoring_aggregation_and_deduplication():
     rule1 = RuleResult(
@@ -175,7 +177,7 @@ def test_risk_scoring_aggregation_and_deduplication():
         weight=65.0,
         reason="Large payment",
     )
-    # Duplicate rule with lower weight should be ignored
+
     rule1_dup = RuleResult(
         rule_code=RULE_LARGE_TRANSACTION,
         triggered=True,
@@ -192,7 +194,7 @@ def test_risk_scoring_aggregation_and_deduplication():
     )
 
     res = calculate_risk_score([rule1, rule1_dup, rule2], transaction_event_id="evt_test")
-    # 65 + 35 = 100
+
     assert res.risk_score == 100.0
     assert res.severity == Severity.CRITICAL
     assert len(res.triggered_rules) == 2
@@ -221,3 +223,13 @@ def test_anomaly_detection_engine_evaluate():
     assert result.has_anomalies
     assert result.risk_score > 0
     assert any(r.rule_code == RULE_LARGE_TRANSACTION for r in result.triggered_rules)
+
+
+def test_mock_generator_seed_labels_and_anomaly_rate():
+    base_time = datetime(2026, 1, 1, tzinfo=UTC)
+    first = generate_scenario("normal", random.Random(42), 8, base_time, 1.0)
+    second = generate_scenario("normal", random.Random(42), 8, base_time, 1.0)
+
+    assert first == second
+    assert all(event["scenario"] == "large_payment" for event in first)
+    assert len({event["event_id"] for event in first}) == 8

@@ -1,8 +1,8 @@
-"""Explainable risk scoring engine.
 
-Produces a heuristic risk indicator (0-100) from triggered detection rules.
-This is NOT a statistically calibrated fraud probability.
-"""
+
+
+
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,12 +12,12 @@ from backend.app.detection.schemas import DetectionResult, RuleResult, Severity
 
 @dataclass(frozen=True)
 class ScoringConfig:
-    """Thresholds for mapping raw score to severity."""
+
 
     low_max: float = 25.0
     medium_max: float = 50.0
     high_max: float = 75.0
-    # Above high_max → CRITICAL
+
 
 
 def calculate_risk_score(
@@ -25,13 +25,13 @@ def calculate_risk_score(
     config: ScoringConfig | None = None,
     transaction_event_id: str = "",
 ) -> DetectionResult:
-    """Calculate aggregated risk score and severity from triggered rules.
 
-    - De-duplicates by rule_code (retains the instance with highest weight)
-    - Sums the weights of triggered rules, capped at 100
-    - Maps the score to severity using ScoringConfig thresholds
-    - Collects all reasons from triggered rules
-    """
+
+
+
+
+
+
     if isinstance(config, str) and not transaction_event_id:
         transaction_event_id = config
         config = None

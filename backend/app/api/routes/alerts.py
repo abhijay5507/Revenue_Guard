@@ -1,4 +1,4 @@
-"""REST API routes for anomaly detection alert management."""
+
 from __future__ import annotations
 
 import logging
@@ -33,9 +33,9 @@ def list_alerts(
     date_to: datetime | None = Query(default=None, description="Filter alerts created before this ISO 8601 timestamp"),
     offset: int = Query(default=0, ge=0, description="Pagination offset"),
     limit: int = Query(default=50, ge=1, le=200, description="Page size"),
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> AlertListResponse:
-    """Retrieve alerts with optional filtering and pagination."""
+
     alerts, total = get_alerts(
         db,
         severity=severity,
@@ -55,9 +55,9 @@ def list_alerts(
 
 @router.get("/stats", response_model=AlertStatsResponse)
 def alert_statistics(
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> AlertStatsResponse:
-    """Return aggregate alert statistics."""
+
     stats = get_alert_stats(db)
     return AlertStatsResponse(**stats)
 
@@ -65,9 +65,9 @@ def alert_statistics(
 @router.get("/{alert_id}", response_model=AlertResponse)
 def get_alert(
     alert_id: int,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> AlertResponse:
-    """Retrieve a specific alert by ID."""
+
     alert = get_alert_by_id(db, alert_id)
     if alert is None:
         raise HTTPException(
@@ -81,9 +81,9 @@ def get_alert(
 def patch_alert_status(
     alert_id: int,
     body: AlertStatusUpdate,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> AlertResponse:
-    """Update an alert's status (OPEN → ACKNOWLEDGED → RESOLVED)."""
+
     try:
         alert = update_alert_status(db, alert_id, body.status)
     except ValueError as exc:

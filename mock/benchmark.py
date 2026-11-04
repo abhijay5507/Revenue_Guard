@@ -12,7 +12,7 @@ def run_benchmark():
     engine = AnomalyDetectionEngine()
     total_evals = 1000
 
-    # 1. Throughput & Latency Benchmark
+
     start = time.perf_counter()
     for i in range(total_evals):
         txn = {
@@ -41,12 +41,12 @@ def run_benchmark():
     print(f"Average Latency:   {avg_latency_ms:.4f} ms/eval")
     print(f"Throughput:        {ops_per_sec:.2f} evals/sec\n")
 
-    # 2. Quality Metrics: Precision, Recall, FPR on Labeled Scenarios
-    # 50 normal, 50 large transaction anomalies
+
+
     rng = random.Random(42)
     labeled_samples = []
 
-    # Normal samples (label = False)
+
     for i in range(100):
         labeled_samples.append(({
             "event_id": f"norm_{i}",
@@ -58,7 +58,7 @@ def run_benchmark():
             "occurred_at": datetime.now(UTC),
         }, False))
 
-    # Anomalous samples (label = True, > 5000 USD)
+
     for i in range(50):
         labeled_samples.append(({
             "event_id": f"anom_{i}",

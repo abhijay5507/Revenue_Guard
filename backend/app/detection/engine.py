@@ -1,4 +1,4 @@
-"""Main anomaly detection engine orchestrating rule evaluation and scoring."""
+
 from __future__ import annotations
 
 import logging
@@ -30,7 +30,7 @@ def _parse_datetime(val: Any) -> datetime | None:
 
 
 class AnomalyDetectionEngine:
-    """Orchestrates anomaly detection rule evaluation and risk scoring."""
+
 
     def __init__(
         self,
@@ -74,7 +74,7 @@ class AnomalyDetectionEngine:
 
         all_results: list[RuleResult] = []
 
-        # Rule A: Large Transaction Detection
+
         try:
             res_a = detect_large_transaction(
                 amount=amount,
@@ -85,7 +85,7 @@ class AnomalyDetectionEngine:
         except Exception:
             logger.exception("Failed evaluating Rule A (Large Transaction) for event %s", event_id)
 
-        # Rule B: Payment Failure Spike
+
         try:
             gw_txs = history.get("gateway_transactions", [])
             res_b = detect_payment_failure_spike(
@@ -98,7 +98,7 @@ class AnomalyDetectionEngine:
         except Exception:
             logger.exception("Failed evaluating Rule B (Failure Spike) for event %s", event_id)
 
-        # Rule C: Transaction Volume Spike
+
         try:
             current_count = history.get("gateway_current_count")
             if current_count is None and "gateway_transactions" in history:
@@ -115,7 +115,7 @@ class AnomalyDetectionEngine:
         except Exception:
             logger.exception("Failed evaluating Rule C (Volume Spike) for event %s", event_id)
 
-        # Rule D: Repeated Payment Failures
+
         try:
             txn_txs = history.get("txn_id_transactions", [])
             res_d = detect_repeated_failures(

@@ -8,12 +8,12 @@ from backend.app.schemas.payment_event import PaymentEvent
 
 
 class TransactionStoreError(Exception):
-    """A database failure prevented reliable event persistence."""
+    pass
 
 
 def persist_event(db: Session, event: PaymentEvent, raw_payload: dict) -> bool:
-    # Payment providers may include additional metadata. Persist only fields
-    # represented by the Transaction model while retaining all fields in JSONB.
+
+
     transaction_fields = {
         "event_id",
         "transaction_id",

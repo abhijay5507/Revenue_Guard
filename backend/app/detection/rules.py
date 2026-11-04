@@ -1,8 +1,8 @@
-"""Anomaly detection rules for RevenueGuard.
 
-Each rule is an independent function that evaluates transaction data and returns
-a RuleResult without dependencies on database or API layers.
-"""
+
+
+
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -31,7 +31,7 @@ def _parse_datetime(val: Any) -> datetime | None:
 
 @dataclass
 class DetectionConfig:
-    """Configurable thresholds and parameters for anomaly detection rules."""
+
 
     currency_thresholds: dict[str, Decimal] = field(
         default_factory=lambda: {

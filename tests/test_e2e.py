@@ -20,18 +20,18 @@ def signed(payload: dict, secret: str = "test-secret") -> tuple[bytes, str]:
 
 
 def test_end_to_end_anomaly_flow(client, monkeypatch):
-    # Route celery delay calls directly to synchronous apply for test simulation
+
     events_enqueued = []
 
     def mock_delay(event_id: str):
         events_enqueued.append(event_id)
-        # Execute processing synchronously with test db
+
         monkeypatch.setattr("backend.app.workers.tasks.SessionLocal", client.testing_sessions)
         process_payment_event.apply(args=[event_id]).get()
 
     monkeypatch.setattr("backend.app.api.routes.webhooks.process_payment_event.delay", mock_delay)
 
-    # 1. Send normal transaction
+
     normal_payload = {
         "event_id": "evt_e2e_normal",
         "transaction_id": "txn_e2e_1",
@@ -47,11 +47,11 @@ def test_end_to_end_anomaly_flow(client, monkeypatch):
     assert resp.status_code == 200
     assert resp.json()["status"] == "accepted"
 
-    # Verify no alerts were created for normal transaction
+
     stats_resp = client.get("/api/v1/alerts/stats")
     assert stats_resp.json()["total_alerts"] == 0
 
-    # 2. Send anomalous transaction ($35,000 USD -> triggers LARGE_TRANSACTION CRITICAL)
+
     anom_payload = {
         "event_id": "evt_e2e_anom",
         "transaction_id": "txn_e2e_2",
@@ -67,7 +67,7 @@ def test_end_to_end_anomaly_flow(client, monkeypatch):
     assert resp_anom.status_code == 200
     assert resp_anom.json()["status"] == "accepted"
 
-    # 3. Verify alert was generated and persisted
+
     alerts_resp = client.get("/api/v1/alerts?severity=CRITICAL")
     assert alerts_resp.status_code == 200
     alerts_data = alerts_resp.json()
@@ -78,7 +78,7 @@ def test_end_to_end_anomaly_flow(client, monkeypatch):
     assert alert["status"] == "OPEN"
     alert_id = alert["id"]
 
-    # 4. Manage Alert: Acknowledge and Resolve via API
+
     patch_ack = client.patch(f"/api/v1/alerts/{alert_id}", json={"status": "ACKNOWLEDGED"})
     assert patch_ack.status_code == 200
     assert patch_ack.json()["status"] == "ACKNOWLEDGED"
@@ -88,7 +88,7 @@ def test_end_to_end_anomaly_flow(client, monkeypatch):
     assert patch_resolve.json()["status"] == "RESOLVED"
     assert patch_resolve.json()["resolved_at"] is not None
 
-    # 5. Check stats reflect the lifecycle
+
     final_stats = client.get("/api/v1/alerts/stats").json()
     assert final_stats["total_alerts"] == 1
     assert final_stats["open_alerts"] == 0

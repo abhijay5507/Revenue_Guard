@@ -46,7 +46,7 @@ def test_metadata_and_signed_webhook(client):
 
 def test_signed_webhook_accepts_provider_extra_fields(client):
     payload = event_payload("evt_extra_field")
-    payload["sequence"] = 0 # type: ignore
+    payload["sequence"] = 0
     body, signature = signed(payload)
     response = client.post(
         "/api/v1/webhooks/payment",
@@ -112,7 +112,7 @@ def test_service_reports_database_failure():
             pass
 
     try:
-        persist_event(BrokenSession(), event, payload)  # type: ignore[arg-type]
+        persist_event(BrokenSession(), event, payload)
         assert False, "expected TransactionStoreError"
     except TransactionStoreError:
         pass

@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import DateTime, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
 from backend.app.db.base import Base
@@ -32,4 +34,11 @@ class Transaction(Base):
     error_code: Mapped[str | None] = mapped_column(String(100), index=True)
     raw_payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB().with_variant(JSON(), "sqlite"), nullable=False
+    )
+
+    alerts: Mapped[list["Alert"]] = relationship(
+        "Alert",
+        back_populates="transaction",
+        lazy="selectin",
+        cascade="all, delete-orphan",
     )

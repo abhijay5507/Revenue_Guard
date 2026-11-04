@@ -8,7 +8,7 @@ from backend.app.core.config import settings
 from backend.app.db.base import Base
 from backend.app.db.session import get_db
 from backend.app.main import app
-from backend.app.models import Transaction  # noqa: F401
+from backend.app.models import Alert, Transaction  # noqa: F401
 
 
 @pytest.fixture

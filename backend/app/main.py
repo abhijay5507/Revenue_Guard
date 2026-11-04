@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from sqlalchemy.exc import SQLAlchemyError
 
+from backend.app.api.routes.alerts import router as alert_router
 from backend.app.api.routes.webhooks import router as webhook_router
 from backend.app.db.session import test_database_connection
 
 app= FastAPI(title="RevenueGuard")
 app.include_router(webhook_router, prefix="/api/v1")
+app.include_router(alert_router, prefix="/api/v1")
 
 @app.get("/health")
 def health_check():

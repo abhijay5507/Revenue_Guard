@@ -1,4 +1,4 @@
-"""Create payment transactions table."""
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql

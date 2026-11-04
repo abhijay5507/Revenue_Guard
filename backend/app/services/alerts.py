@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def _make_fingerprint(rule_code: str, event_id: str) -> str:
-    
+
     raw = f"{rule_code}:{event_id}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:64]
 
@@ -26,14 +26,14 @@ def persist_alerts(
     event_id: str,
     detection_result: Any,
 ) -> int:
-    
+
     created = 0
     now = datetime.now(UTC)
 
     for rule in detection_result.triggered_rules:
         fingerprint = _make_fingerprint(rule.rule_code, event_id)
 
-        # Check if this alert already exists (idempotency guard)
+
         existing = db.execute(
             select(Alert.id).where(Alert.fingerprint == fingerprint)
         ).scalar_one_or_none()
@@ -66,12 +66,13 @@ def persist_alerts(
             updated_at=now,
         )
         try:
-            db.add(alert)
-            db.flush()  # Detect integrity errors before commit
+
+
+            with db.begin_nested():
+                db.add(alert)
+                db.flush()
             created += 1
         except IntegrityError:
-            # Race condition: another worker created the alert first
-            db.rollback()
             logger.debug(
                 "Concurrent alert creation detected for fingerprint=%s",
                 fingerprint,
@@ -103,11 +104,11 @@ def get_alerts(
     offset: int = 0,
     limit: int = 50,
 ) -> tuple[list[Alert], int]:
-    """Retrieve alerts with filtering and pagination.
 
-    Returns:
-        Tuple of (alerts list, total count).
-    """
+
+
+
+
     query = select(Alert).order_by(Alert.created_at.desc())
     count_query = select(func.count()).select_from(Alert)
 
@@ -131,7 +132,7 @@ def get_alerts(
 
 
 def get_alert_by_id(db: Session, alert_id: int) -> Alert | None:
-    """Retrieve a single alert by its primary key."""
+
     return db.execute(
         select(Alert).where(Alert.id == alert_id)
     ).scalar_one_or_none()
@@ -142,7 +143,7 @@ def update_alert_status(
     alert_id: int,
     new_status: str,
 ) -> Alert | None:
-    
+
     alert = get_alert_by_id(db, alert_id)
     if alert is None:
         return None
@@ -171,7 +172,7 @@ def update_alert_status(
 
 
 def get_alert_stats(db: Session) -> dict[str, Any]:
-    """Return aggregate alert statistics."""
+
     total = db.execute(
         select(func.count()).select_from(Alert)
     ).scalar() or 0
@@ -184,22 +185,22 @@ def get_alert_stats(db: Session) -> dict[str, Any]:
         select(func.count()).select_from(Alert).where(Alert.severity == "CRITICAL")
     ).scalar() or 0
 
-    # Counts by severity
+
     severity_rows = db.execute(
         select(Alert.severity, func.count())
         .group_by(Alert.severity)
     ).all()
     by_severity = {row[0]: row[1] for row in severity_rows}
 
-    # Counts by rule_code
+
     rule_rows = db.execute(
         select(Alert.rule_code, func.count())
         .group_by(Alert.rule_code)
     ).all()
     by_rule = {row[0]: row[1] for row in rule_rows}
 
-    # Recent activity (last 24h)
-    cutoff = datetime.now(UTC) - __import__("datetime").timedelta(hours=24)
+
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
     recent_count = db.execute(
         select(func.count()).select_from(Alert).where(Alert.created_at >= cutoff)
     ).scalar() or 0

@@ -1,4 +1,4 @@
-"""Pydantic schemas for the anomaly detection engine."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class Severity(str, Enum):
-    """Alert severity levels."""
+
 
     LOW = "LOW"
     MEDIUM = "MEDIUM"
@@ -17,7 +17,7 @@ class Severity(str, Enum):
 
 
 class RuleResult(BaseModel):
-    """Result of a single detection rule evaluation."""
+
 
     model_config = ConfigDict(frozen=True)
 
@@ -30,7 +30,7 @@ class RuleResult(BaseModel):
 
 
 class DetectionResult(BaseModel):
-    """Aggregated result from the detection engine for a single evaluation."""
+
 
     model_config = ConfigDict(frozen=True)
 

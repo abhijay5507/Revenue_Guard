@@ -15,7 +15,7 @@ from backend.app.workers.tasks import process_payment_event
 
 def test_alert_persistence_and_deduplication(client):
     with client.testing_sessions() as db:
-        # Create a base transaction
+
         txn = Transaction(
             event_id="evt_test_alert",
             transaction_id="txn_test_alert",
@@ -48,21 +48,21 @@ def test_alert_persistence_and_deduplication(client):
             reasons=["Large payment"],
         )
 
-        # First persist
+
         created = persist_alerts(db, txn.id, txn.event_id, det_result)
         assert created == 1
 
-        # Check DB
+
         alerts = db.execute(select(Alert).where(Alert.transaction_id == txn.id)).scalars().all()
         assert len(alerts) == 1
         assert alerts[0].rule_code == "LARGE_TRANSACTION"
         assert alerts[0].status == "OPEN"
 
-        # Second persist with same event and rule (deduplication test)
+
         created_again = persist_alerts(db, txn.id, txn.event_id, det_result)
         assert created_again == 0
 
-        # Count remains 1
+
         alerts_after = db.execute(select(Alert).where(Alert.transaction_id == txn.id)).scalars().all()
         assert len(alerts_after) == 1
 
@@ -102,31 +102,31 @@ def test_alert_api_endpoints(client):
         db.refresh(alert)
         alert_id = alert.id
 
-    # Test GET /api/v1/alerts
+
     resp = client.get("/api/v1/alerts")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] >= 1
     assert any(a["id"] == alert_id for a in data["alerts"])
 
-    # Test GET /api/v1/alerts/stats
+
     resp_stats = client.get("/api/v1/alerts/stats")
     assert resp_stats.status_code == 200
     stats = resp_stats.json()
     assert stats["total_alerts"] >= 1
     assert stats["open_alerts"] >= 1
 
-    # Test GET /api/v1/alerts/{id}
+
     resp_single = client.get(f"/api/v1/alerts/{alert_id}")
     assert resp_single.status_code == 200
     assert resp_single.json()["severity"] == "CRITICAL"
 
-    # Test PATCH /api/v1/alerts/{id} -> ACKNOWLEDGED
+
     resp_patch = client.patch(f"/api/v1/alerts/{alert_id}", json={"status": "ACKNOWLEDGED"})
     assert resp_patch.status_code == 200
     assert resp_patch.json()["status"] == "ACKNOWLEDGED"
 
-    # Test PATCH /api/v1/alerts/{id} -> RESOLVED
+
     resp_resolve = client.patch(f"/api/v1/alerts/{alert_id}", json={"status": "RESOLVED"})
     assert resp_resolve.status_code == 200
     assert resp_resolve.json()["status"] == "RESOLVED"
@@ -135,7 +135,7 @@ def test_alert_api_endpoints(client):
 
 def test_full_process_payment_event_task(client, monkeypatch):
     with client.testing_sessions() as db:
-        # Insert a suspicious transaction
+
         txn = Transaction(
             event_id="evt_worker_test",
             transaction_id="txn_worker_test",
@@ -151,10 +151,10 @@ def test_full_process_payment_event_task(client, monkeypatch):
         db.add(txn)
         db.commit()
 
-    # Monkeypatch SessionLocal to point to our test SQLite sessionmaker
+
     monkeypatch.setattr("backend.app.workers.tasks.SessionLocal", client.testing_sessions)
 
-    # Execute task synchronously
+
     result = process_payment_event.apply(args=["evt_worker_test"]).get()
     assert result["status"] == "processed"
     assert result["risk_score"] > 0

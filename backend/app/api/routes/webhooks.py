@@ -19,7 +19,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 async def receive_payment(
     request: Request,
     signature: str | None = Header(default=None, alias="X-RevenueGuard-Signature"),
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     body = await request.body()
     if not verify_signature(body, signature):
@@ -27,7 +27,7 @@ async def receive_payment(
     try:
         payload = json.loads(body)
         if not isinstance(payload, dict):
-            raise ValueError("JSON event must be an object")  # noqa: TRY004
+            raise ValueError("JSON event must be an object")
         event = PaymentEvent.model_validate(payload)
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError, ValidationError):
         raise HTTPException(status_code= status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid payment event") from None
@@ -39,8 +39,8 @@ async def receive_payment(
     if not accepted:
         return {"status": "already_received", "event_id": event.event_id}
     try:
-        process_payment_event.delay(event.event_id) # type: ignore
-    except Exception:  # noqa: BLE001
+        process_payment_event.delay(event.event_id)
+    except Exception:
         logger.error("Background enqueue failed for persisted event %s", event.event_id)
         raise HTTPException(status_code=503, detail="Event was saved but downstream queue is unavailable") from None
     return {"status": "accepted", "event_id": event.event_id}

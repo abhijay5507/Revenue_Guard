@@ -1,4 +1,4 @@
-"""Pydantic request and response schemas for the alert management API."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class AlertResponse(BaseModel):
-    """Single alert in API responses."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -26,7 +26,7 @@ class AlertResponse(BaseModel):
 
 
 class AlertListResponse(BaseModel):
-    """Paginated list of alerts."""
+
     alerts: list[AlertResponse]
     total: int
     offset: int
@@ -34,7 +34,7 @@ class AlertListResponse(BaseModel):
 
 
 class AlertStatusUpdate(BaseModel):
-    """Request body for updating alert status."""
+
     status: str = Field(
         description="New status: OPEN, ACKNOWLEDGED, or RESOLVED",
         pattern="^(OPEN|ACKNOWLEDGED|RESOLVED)$",
@@ -42,7 +42,7 @@ class AlertStatusUpdate(BaseModel):
 
 
 class AlertStatsResponse(BaseModel):
-    """Aggregate alert statistics."""
+
     total_alerts: int
     open_alerts: int
     critical_alerts: int

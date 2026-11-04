@@ -1,4 +1,4 @@
-"""SQLAlchemy model for anomaly detection alerts."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,7 +13,7 @@ from backend.app.db.base import Base
 
 
 class Alert(Base):
-    """Persisted anomaly detection alert."""
+
 
     __tablename__ = "alerts"
 
@@ -47,7 +47,7 @@ class Alert(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    # Relationship to Transaction
+
     transaction: Mapped["Transaction"] = relationship(
         "Transaction", back_populates="alerts", lazy="selectin"
     )
